@@ -102,5 +102,3 @@ dependencies {
     implementation "com.github.kittinunf.fuel:fuel-android:2.3.1"
     implementation "com.github.kittinunf.fuel:fuel-coroutines:2.3.1"
 }
-
-apply plugin: "com.vanniktech.maven.publish"
