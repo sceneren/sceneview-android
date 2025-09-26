@@ -78,6 +78,16 @@ android {
     androidResources {
         noCompress 'filamat', 'ktx'
     }
+
+    dexOptions {
+        // 增加分配给 D8/Dexer 的最大内存。
+        // 默认值通常是 1G 或 2G。我们将其增加到 4G 或更高。
+        // 注意：使用 Java 堆内存表示法 (e.g., "4g", "8g")
+        javaMaxHeapSize = "4g"
+
+        // 建议加上 preDexLibraries=false 来稍微优化构建时间
+        // preDexLibraries = false
+    }
 }
 
 dependencies {
