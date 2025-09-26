@@ -4,16 +4,14 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.media.MediaRecorder
 import android.opengl.EGLContext
-import android.os.Build
 import android.util.AttributeSet
 import android.view.Choreographer
 import android.view.MotionEvent
 import android.view.Surface
-import android.view.SurfaceView
+import android.view.TextureView
 import android.view.WindowManager
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
-import androidx.annotation.RequiresApi
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.findFragment
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -23,6 +21,7 @@ import androidx.lifecycle.findViewTreeLifecycleOwner
 import com.google.android.filament.ColorGrading
 import com.google.android.filament.Colors
 import com.google.android.filament.Engine
+import com.google.android.filament.Entity
 import com.google.android.filament.Fence
 import com.google.android.filament.Filament
 import com.google.android.filament.IndirectLight
@@ -69,15 +68,10 @@ import io.github.sceneview.node.LightNode
 import io.github.sceneview.node.Node
 import io.github.sceneview.node.ViewNode2
 import io.github.sceneview.utils.OpenGL
-import io.github.sceneview.utils.SurfaceMirrorer
+import io.github.sceneview.utils.SurfaceTextureMirrorer
 import io.github.sceneview.utils.intervalSeconds
 import io.github.sceneview.utils.readBuffer
 import io.github.sceneview.utils.setKeepScreenOn
-
-typealias Entity = Int
-typealias EntityInstance = Int
-typealias FilamentEntity = com.google.android.filament.Entity
-typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
 
 /**
  * A SurfaceView that manages rendering and interactions with the 3D scene.
@@ -87,7 +81,7 @@ typealias FilamentEntityInstance = com.google.android.filament.EntityInstance
  * The Scene also provides hit testing, a way to detect which node is touched by a MotionEvent or
  * Ray.
  */
-open class SceneView @JvmOverloads constructor(
+open class SceneTextureView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0,
@@ -222,7 +216,7 @@ open class SceneView @JvmOverloads constructor(
     var onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
     sharedActivity: ComponentActivity? = null,
     sharedLifecycle: Lifecycle? = null,
-) : SurfaceView(context, attrs, defStyleAttr, defStyleRes) {
+) : TextureView(context, attrs, defStyleAttr, defStyleRes) {
 
     /** ## Deprecated: Use [CameraGestureDetector.DefaultCameraManipulator]
      *
@@ -254,7 +248,7 @@ open class SceneView @JvmOverloads constructor(
         onTouchEvent: ((e: MotionEvent, hitResult: HitResult?) -> Boolean)? = null,
         sharedActivity: ComponentActivity? = null,
         sharedLifecycle: Lifecycle? = null,
-    ): this (
+    ) : this(
         context = context,
         attrs = attrs,
         defStyleAttr = defStyleAttr,
@@ -357,7 +351,7 @@ open class SceneView @JvmOverloads constructor(
         uiHelper.renderCallback = SurfaceCallback()
         uiHelper.isOpaque = isOpaque
         // Make the render target transparent
-        uiHelper.attachTo(this@SceneView)
+        uiHelper.attachTo(this@SceneTextureView)
     }
 
     protected var _cameraNode: CameraNode? = null
@@ -411,7 +405,7 @@ open class SceneView @JvmOverloads constructor(
     /**
      * The Skybox is drawn last and covers all pixels not touched by geometry.
      *
-     * When added to a [SceneView], the `Skybox` fills all untouched pixels.
+     * When added to a [SceneTextureView], the `Skybox` fills all untouched pixels.
      *
      * The Skybox to use to fill untouched pixels, or null to unset the Skybox.
      *
@@ -545,7 +539,7 @@ open class SceneView @JvmOverloads constructor(
     private val frameCallback = FrameCallback()
 
     private var lastTouchEvent: MotionEvent? = null
-    private var surfaceMirrorer: SurfaceMirrorer? = null
+    private var surfaceMirrorer: SurfaceTextureMirrorer? = null
     private var lastFrameTimeNanos: Long? = null
 
     private var defaultEglContext: EGLContext? = null
@@ -652,7 +646,7 @@ open class SceneView @JvmOverloads constructor(
         height: Int = this.height
     ) {
         if (surfaceMirrorer == null) {
-            surfaceMirrorer = SurfaceMirrorer()
+            surfaceMirrorer = SurfaceTextureMirrorer()
         }
         surfaceMirrorer?.startMirroring(this, surface, left, bottom, width, height)
     }
@@ -893,7 +887,7 @@ open class SceneView @JvmOverloads constructor(
     private inner class LifeCycleObserver : DefaultLifecycleObserver {
         override fun onResume(owner: LifecycleOwner) {
 
-            viewNodeWindowManager?.resume(this@SceneView)
+            viewNodeWindowManager?.resume(this@SceneTextureView)
 
             // Start the drawing when the renderer is resumed.  Remove and re-add the callback
             // to avoid getting called twice.
@@ -941,7 +935,7 @@ open class SceneView @JvmOverloads constructor(
         }
 
         override fun onResized(width: Int, height: Int) {
-            this@SceneView.onResized(width, height)
+            this@SceneTextureView.onResized(width, height)
 
             // Wait for all pending frames to be processed before returning. This is to avoid a race
             // between the surface being resized before pending frames are rendered into it.
